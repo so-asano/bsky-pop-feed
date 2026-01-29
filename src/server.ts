@@ -1,4 +1,7 @@
 import express from "express";
+import { verifyJwt, parseReqNsid } from "@atproto/xrpc-server";
+import { DidResolver } from "@atproto/identity";
+import { AtpAgent } from "@atproto/api";
 import { db } from "./db/index.js";
 import { popularPosts } from "./db/schema.js";
 import { desc, sql } from "drizzle-orm";
@@ -8,13 +11,50 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const HOSTNAME = process.env.FEEDGEN_HOSTNAME || "localhost";
 const FEED_URI = process.env.FEED_URI || `at://did:example/app.bsky.feed.generator/discover-japan`;
+const SERVICE_DID = `did:web:${HOSTNAME}`;
+
+const didResolver = new DidResolver({});
+const agent = new AtpAgent({ service: "https://public.api.bsky.app" });
+
+async function validateAuth(req: express.Request): Promise<string | null> {
+  const { authorization = "" } = req.headers;
+  if (!authorization.startsWith("Bearer ")) {
+    return null;
+  }
+  try {
+    const jwt = authorization.replace("Bearer ", "").trim();
+    const nsid = parseReqNsid(req);
+    const parsed = await verifyJwt(jwt, SERVICE_DID, nsid, async (did: string) => {
+      return didResolver.resolveAtprotoKey(did);
+    });
+    return parsed.iss;
+  } catch {
+    return null;
+  }
+}
+
+async function getUserLanguage(did: string): Promise<string> {
+  try {
+    const { data } = await agent.getAuthorFeed({ actor: did, limit: 1 });
+    if (data.feed.length > 0) {
+      const record = data.feed[0].post.record as { langs?: string[] };
+      const langs = record.langs ?? [];
+      if (langs[0] === "ja") {
+        return "ja";
+      }
+    }
+  } catch {
+    // Ignore errors
+  }
+  return "en";
+}
 
 app.use(express.json());
 
 // describeFeedGenerator
 app.get("/xrpc/app.bsky.feed.describeFeedGenerator", (_req, res) => {
   res.json({
-    did: `did:web:${HOSTNAME}`,
+    did: SERVICE_DID,
     feeds: [
       {
         uri: FEED_URI,
@@ -26,18 +66,22 @@ app.get("/xrpc/app.bsky.feed.describeFeedGenerator", (_req, res) => {
 // getFeedSkeleton
 app.get("/xrpc/app.bsky.feed.getFeedSkeleton", async (req, res) => {
   try {
-    const feed = req.query.feed as string;
+    const requesterDid = await validateAuth(req);
+    const userLang = requesterDid ? await getUserLanguage(requesterDid) : "ja";
+    console.log(`getFeedSkeleton requested by: ${requesterDid ?? "anonymous"}, lang: ${userLang}`);
+
     const limit = Math.min(Number(req.query.limit) || 50, 100);
     const cursor = req.query.cursor as string | undefined;
-
-    // Parse cursor (offset-based)
     const offset = cursor ? parseInt(cursor, 10) : 0;
 
-    // Get popular posts with Japanese language, ordered by engagement
+    const langFilter = userLang === "ja"
+      ? sql`${popularPosts.langs}::text LIKE '%"ja"%'`
+      : sql`${popularPosts.langs}::text LIKE '%"en"%'`;
+
     const results = await db
       .select({ uri: popularPosts.uri })
       .from(popularPosts)
-      .where(sql`${popularPosts.langs}::text LIKE '%"ja"%'`)
+      .where(langFilter)
       .orderBy(
         desc(sql`${popularPosts.likeCount} + ${popularPosts.repostCount}`)
       )
@@ -66,10 +110,9 @@ app.get("/health", (_req, res) => {
 
 // Well-known DID document for did:web
 app.get("/.well-known/did.json", (_req, res) => {
-  const serviceDid = `did:web:${HOSTNAME}`;
   res.json({
     "@context": ["https://www.w3.org/ns/did/v1"],
-    id: serviceDid,
+    id: SERVICE_DID,
     service: [
       {
         id: "#bsky_fg",
@@ -82,8 +125,7 @@ app.get("/.well-known/did.json", (_req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Feed generator server running on port ${PORT}`);
-  console.log(`DID: did:web:${HOSTNAME}`);
+  console.log(`DID: ${SERVICE_DID}`);
 
-  // Start Jetstream worker
   startJetstream().catch(console.error);
 });
