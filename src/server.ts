@@ -86,12 +86,14 @@ app.get("/xrpc/app.bsky.feed.getFeedSkeleton", async (req, res) => {
       .from(popularPosts)
       .where(sql`${langFilter} AND ${cursorFilter}`)
       .orderBy(desc(popularPosts.postCreatedAt))
-      .limit(limit);
+      .limit(limit + 1);
 
-    const feedItems = results.map((row) => ({ post: row.uri }));
+    const hasMore = results.length > limit;
+    const items = hasMore ? results.slice(0, limit) : results;
+    const feedItems = items.map((row) => ({ post: row.uri }));
 
-    const lastItem = results[results.length - 1];
-    const newCursor = results.length === limit && lastItem?.postCreatedAt
+    const lastItem = items[items.length - 1];
+    const newCursor = hasMore && lastItem?.postCreatedAt
       ? String(lastItem.postCreatedAt.getTime())
       : undefined;
 
