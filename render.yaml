@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: pop-feed
+    runtime: node
+    buildCommand: pnpm install && pnpm db:generate && pnpm db:migrate && pnpm publish
+    startCommand: pnpm serve
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pop-feed-db
+          property: connectionString
+      - key: PORT
+        value: 3000
+      - key: FEEDGEN_HOSTNAME
+        sync: false
+      - key: FEED_RECORD_NAME
+        value: pop-feed-v1
+      - key: BLUESKY_HANDLE
+        sync: false
+      - key: BLUESKY_PASSWORD
+        sync: false
+
+databases:
+  - name: pop-feed-db
+    plan: starter
