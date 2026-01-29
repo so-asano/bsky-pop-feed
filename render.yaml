@@ -2,7 +2,7 @@ services:
   - type: web
     name: pop-feed
     runtime: node
-    buildCommand: pnpm install && pnpm db:generate && pnpm db:migrate && pnpm publish
+    buildCommand: pnpm install && pnpm db:push && pnpm publish
     startCommand: pnpm serve
     envVars:
       - key: DATABASE_URL
