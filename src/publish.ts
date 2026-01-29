@@ -26,8 +26,8 @@ async function main() {
     rkey: RECORD_NAME,
     record: {
       did: feedGenDid,
-      displayName: "Discover Japan",
-      description: "Popular Japanese posts on Bluesky",
+      displayName: "Pop Feed",
+      description: "Popular posts on Bluesky",
       createdAt: new Date().toISOString(),
     },
   };
