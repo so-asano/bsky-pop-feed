@@ -49,7 +49,7 @@ async function fetchPostDetails(uris: string[]): Promise<{ saved: number; ja: nu
     const { data } = await agent.getPosts({ uris });
 
     for (const post of data.posts) {
-      const record = post.record as { text?: string; langs?: string[] };
+      const record = post.record as { text?: string; langs?: string[]; createdAt?: string };
       const langs = record.langs ?? [];
 
       await db
@@ -62,6 +62,7 @@ async function fetchPostDetails(uris: string[]): Promise<{ saved: number; ja: nu
           likeCount: post.likeCount ?? 0,
           repostCount: post.repostCount ?? 0,
           replyCount: post.replyCount ?? 0,
+          postCreatedAt: record.createdAt ? new Date(record.createdAt) : null,
           indexedAt: post.indexedAt ? new Date(post.indexedAt) : null,
         })
         .onConflictDoUpdate({

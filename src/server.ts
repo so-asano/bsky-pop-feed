@@ -72,26 +72,28 @@ app.get("/xrpc/app.bsky.feed.getFeedSkeleton", async (req, res) => {
 
     const limit = Math.min(Number(req.query.limit) || 50, 100);
     const cursor = req.query.cursor as string | undefined;
-    const offset = cursor ? parseInt(cursor, 10) : 0;
 
     const langFilter = userLang === "ja"
       ? sql`${popularPosts.langs}::text LIKE '%"ja"%'`
       : sql`${popularPosts.langs}::text LIKE '%"en"%'`;
 
+    const cursorFilter = cursor
+      ? sql`${popularPosts.postCreatedAt} < ${new Date(parseInt(cursor, 10))}`
+      : sql`1=1`;
+
     const results = await db
-      .select({ uri: popularPosts.uri })
+      .select({ uri: popularPosts.uri, postCreatedAt: popularPosts.postCreatedAt })
       .from(popularPosts)
-      .where(langFilter)
-      .orderBy(
-        desc(sql`${popularPosts.likeCount} + ${popularPosts.repostCount}`)
-      )
-      .limit(limit)
-      .offset(offset);
+      .where(sql`${langFilter} AND ${cursorFilter}`)
+      .orderBy(desc(popularPosts.postCreatedAt))
+      .limit(limit);
 
     const feedItems = results.map((row) => ({ post: row.uri }));
 
-    const newCursor =
-      feedItems.length === limit ? String(offset + limit) : undefined;
+    const lastItem = results[results.length - 1];
+    const newCursor = lastItem?.postCreatedAt
+      ? String(lastItem.postCreatedAt.getTime())
+      : undefined;
 
     res.json({
       feed: feedItems,

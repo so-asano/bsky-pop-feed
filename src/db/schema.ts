@@ -19,6 +19,7 @@ export const popularPosts = pgTable("popular_posts", {
   likeCount: integer("like_count").default(0).notNull(),
   repostCount: integer("repost_count").default(0).notNull(),
   replyCount: integer("reply_count").default(0).notNull(),
+  postCreatedAt: timestamp("post_created_at"), // post's original createdAt
   indexedAt: timestamp("indexed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
