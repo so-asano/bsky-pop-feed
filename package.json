@@ -2,17 +2,18 @@
   "name": "discover-japan-feed",
   "type": "module",
   "scripts": {
-    "dev": "tsx --env-file=.env src/jetstream.ts",
-    "serve": "tsx --env-file=.env src/server.ts",
-    "feed:publish": "tsx --env-file=.env src/publish.ts",
+    "dev": "tsx src/jetstream.ts",
+    "serve": "tsx src/server.ts",
+    "feed:publish": "tsx src/publish.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:reset": "tsx --env-file=.env src/db/reset.ts"
+    "db:reset": "tsx src/db/reset.ts"
   },
   "dependencies": {
     "@atproto/api": "^0.18.18",
+    "dotenv": "^17.2.3",
     "drizzle-orm": "^0.38.0",
     "express": "^5.2.1",
     "postgres": "^3.4.5"
