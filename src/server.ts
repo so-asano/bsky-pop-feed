@@ -91,7 +91,7 @@ app.get("/xrpc/app.bsky.feed.getFeedSkeleton", async (req, res) => {
     const feedItems = results.map((row) => ({ post: row.uri }));
 
     const lastItem = results[results.length - 1];
-    const newCursor = lastItem?.postCreatedAt
+    const newCursor = results.length === limit && lastItem?.postCreatedAt
       ? String(lastItem.postCreatedAt.getTime())
       : undefined;
 
