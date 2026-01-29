@@ -4,7 +4,7 @@ import { DidResolver } from "@atproto/identity";
 import { AtpAgent } from "@atproto/api";
 import { db } from "./db/index.js";
 import { popularPosts } from "./db/schema.js";
-import { desc, sql } from "drizzle-orm";
+import { desc, sql, lt, and } from "drizzle-orm";
 import { startJetstream } from "./jetstream.js";
 
 const app = express();
@@ -77,14 +77,16 @@ app.get("/xrpc/app.bsky.feed.getFeedSkeleton", async (req, res) => {
       ? sql`${popularPosts.langs}::text LIKE '%"ja"%'`
       : sql`${popularPosts.langs}::text LIKE '%"en"%'`;
 
-    const cursorFilter = cursor
-      ? sql`${popularPosts.postCreatedAt} < ${new Date(parseInt(cursor, 10))}`
-      : sql`1=1`;
+    const cursorDate = cursor ? new Date(parseInt(cursor, 10)) : null;
 
     const results = await db
       .select({ uri: popularPosts.uri, postCreatedAt: popularPosts.postCreatedAt })
       .from(popularPosts)
-      .where(sql`${langFilter} AND ${cursorFilter}`)
+      .where(
+        cursorDate
+          ? and(langFilter, lt(popularPosts.postCreatedAt, cursorDate))
+          : langFilter
+      )
       .orderBy(desc(popularPosts.postCreatedAt))
       .limit(limit + 1);
 
