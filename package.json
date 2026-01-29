@@ -4,7 +4,7 @@
   "scripts": {
     "dev": "tsx --env-file=.env src/jetstream.ts",
     "serve": "tsx --env-file=.env src/server.ts",
-    "publish": "tsx --env-file=.env src/publish.ts",
+    "feed:publish": "tsx --env-file=.env src/publish.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
