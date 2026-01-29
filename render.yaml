@@ -22,4 +22,4 @@ services:
 
 databases:
   - name: pop-feed-db
-    plan: starter
+    plan: basic
