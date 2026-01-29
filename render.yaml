@@ -22,4 +22,3 @@ services:
 
 databases:
   - name: pop-feed-db
-    plan: basic
